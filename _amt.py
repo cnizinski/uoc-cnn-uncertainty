@@ -45,7 +45,8 @@ def get_lr(imgspec, cpt, scale):
     lidx, ridx, = cidx, cidx
     ldist, rdist = 0, 0
     # Get course step size
-    cstep = np.amax([1, int(scale/10)])
+    cstep = 1
+    #cstep = np.amax([1, int(scale/10)])
     # Coarse left sweep
     while (ldist < scale):
         lidx -= cstep
@@ -134,7 +135,7 @@ def img_amt(img_arr, max_scale, n, snakes):
         .format(max_scale, n_samples))
     # Iterate through scales
     for scale in range(1, max_scale+1):
-        if scale % 50 == 0:
+        if scale % 100 == 0:
             print("Current scale = {0:4d}\r".format(scale))
         angs = []
         # Sample pixels and iterate through each
