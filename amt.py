@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import pandas as pd
+import time
 from texture_pkg import interpolate
 
 
@@ -45,8 +46,7 @@ def get_lr(imgspec, cpt, scale):
     lidx, ridx, = cidx, cidx
     ldist, rdist = 0, 0
     # Get course step size
-    cstep = 1
-    #cstep = np.amax([1, int(scale/10)])
+    cstep = 1   #np.amax([1, int(scale/10)])
     # Coarse left sweep
     while (ldist < scale):
         lidx -= cstep
@@ -117,6 +117,7 @@ def img_amt(img_arr, max_scale, n, snakes):
     Usage   : my_dict = img_amt(img, 200, 0.03, snakes=True)
               my_dict = img_amt(img, 200, 1000, snakes=True)
     '''
+    start = time.perf_counter()
     # Initialize output dictionary
     data_dict = {'Scale':[], 'MA':[]}
     # Unfold image
@@ -136,7 +137,8 @@ def img_amt(img_arr, max_scale, n, snakes):
     # Iterate through scales
     for scale in range(1, max_scale+1):
         if scale % 100 == 0:
-            print("Current scale = {0:4d}\r".format(scale))
+            split = time.perf_counter() - start
+            print("Scale = {0:4d}; t = {1:4f} seconds".format(scale, split))
         angs = []
         # Sample pixels and iterate through each
         ends = scale + 15
@@ -149,5 +151,8 @@ def img_amt(img_arr, max_scale, n, snakes):
         # Add mean results to output dict
         data_dict['Scale'].append(scale)
         data_dict['MA'].append(np.nanmean(angs))
+    split = time.perf_counter() - start
+    print("Scale = {0:4d}; t = {1:4f} seconds".format(scale, split))
+    print("Done.\n")
     # Return data
     return data_dict
