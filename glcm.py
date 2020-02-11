@@ -152,7 +152,7 @@ def glcm_entropy_calc(glcm, ngl):
             if val == 0.0:
                 entropy += 0
             else:
-                entropy -= val * np.log(val)
+                entropy -= val * np.log2(val)
     return entropy
 
 
@@ -373,7 +373,7 @@ def glcm_sumentropy(glcms_dict, ngl):
             if val == 0.0:
                 sumentropy += 0
             else:
-                sumentropy -= val * np.log(val)
+                sumentropy -= val * np.log2(val)
         sumentropy_list.append(sumentropy)
     # Return average contrast value
     return np.mean(sumentropy_list)
@@ -422,16 +422,146 @@ def glcm_diffentropy(glcms_dict, ngl):
             if val == 0.0:
                 diffentropy += 0
             else:
-                diffentropy -= val * np.log(val)
+                diffentropy -= val * np.log2(val)
         diffentropy_list.append(diffentropy)
     # Return average contrast value
     return np.mean(diffentropy_list)
+
+
+def pxi_calc(glcm, ngl, i):
+    '''
+    Calculates px(i) for single GLCM at i
+    Inputs  : glcm (single normalized GLCM)
+    Outputs : pxi, pyj
+    '''
+    pxi = 0
+    for j in range(0, ngl-1):
+        pxi += glcm[i][j]
+    return pxi
+
+
+def pyj_calc(glcm, ngl, j):
+    '''
+    Calculates py(j) for single GLCM at j
+    Inputs  : glcm (single normalized GLCM)
+    Outputs : pxi, pyj
+    '''
+    pyj = 0
+    for i in range(0, ngl-1):
+        pyj += glcm[i][j]
+    return pyj
+
+
+def glcm_moc1(glcms_dict, ngl):
+    '''
+    Calculates average measure of correlation 1
+    Inputs  :
+    Outputs :
+    '''
+    # Initialize features list
+    moc1_list = []
+    # Iterate across glcms
+    for key in glcms_dict:
+        glcm = glcms_dict[key]
+        n_glcm = glcm / np.sum(glcm)
+        # Calculate HX
+        hx = 0
+        for i in range(0, ngl-1):
+            val = pxi_calc(n_glcm, ngl, i)
+            if val == 0.0:
+                hx += 0
+            else:
+                hx -= val * np.log2(val)
+        # Calculate HY
+        hy = 0
+        for j in range(0, ngl-1):
+            val = pyj_calc(n_glcm, ngl, j)
+            if val == 0.0:
+                hy += 0
+            else:
+                hy -= val * np.log2(val)
+        # Calculate HXY1
+        hxy1 = 0
+        for i in range(0, ngl-1):
+            for j in range(0, ngl-1):
+                valij = n_glcm[i][j]
+                vali = pxi_calc(n_glcm, ngl, i)
+                valj = pyj_calc(n_glcm, ngl, j)
+                if vali == 0 or valj == 0:
+                    hxy1 += 0
+                else:
+                    hxy1 -= valij * np.log2(vali * valj)
+        # Calculate MoC 1
+        mhxy = np.max([hx, hy])
+        ent = glcm_entropy_calc(n_glcm, ngl)
+        moc1_list.append((ent - hxy1) / mhxy)
+    return np.mean(moc1_list)
+
+
+def glcm_moc2(glcms_dict, ngl):
+    '''
+    Calculates average measure of correlation 2
+    Inputs  :
+    Outputs :
+    '''
+    # Initialize features list
+    moc2_list = []
+    # Iterate across glcms
+    for key in glcms_dict:
+        glcm = glcms_dict[key]
+        n_glcm = glcm / np.sum(glcm)
+        # Calculate HXY2
+        hxy2 = 0
+        for i in range(0, ngl-1):
+            for j in range(0, ngl-1):
+                vali = pxi_calc(n_glcm, ngl, i)
+                valj = pyj_calc(n_glcm, ngl, j)
+                if vali == 0 or valj == 0:
+                    hxy2 += 0
+                else:
+                    hxy2 -= vali * valj * np.log2(vali * valj)
+        # Calculate MoC 2
+        ent = glcm_entropy_calc(n_glcm, ngl)
+        moc2i = np.exp(-2.0 * (hxy2 - ent))
+        moc2o = np.sqrt(1 - moc2i)
+        moc2_list.append(moc2o)
+    return np.mean(moc2_list)
+
+
+def glcm_mcc(glcms_dict, ngl):
+    '''
+    Calculates average max. correlation coeff
+    Inputs  :
+    Outputs :
+    '''
+    # Initialize features list
+    mcc_list = []
+    # Iterate across glcms
+    for key in glcms_dict:
+        glcm = glcms_dict[key]
+        n_glcm = glcm / np.sum(glcm)
+        # Initialize and fill Q(i,j)
+        q = np.zeros((ngl, ngl))
+        for i in range(0, ngl-1):
+            for j in range(0, ngl-1):
+                qij = 0
+                for k in range(0, ngl-1):
+                    top = n_glcm[i][k] * n_glcm[j][k]
+                    bot = pxi_calc(n_glcm, ngl, i) * pyj_calc(n_glcm, ngl, j)
+                    qij += top / bot
+                q[i][j] = qij
+        # Compute 2nd largest eigenvalue of Q
+        eigs = np.linalg.eig(q)
+        eig2 = eigs[0][1]
+        mcc_list.append(np.sqrt(eig2))
+    return np.nanmean(mcc_list)
 
 
 # Feature pipeline
 def glcm_features(glcms_dict):
     '''
     Returns direction independent Haralick features
+    References used :
     -- https://doi.org/10.1155/2015/267807
     -- https://doi.org/10.1016/j.patcog.2006.12.004
     Inputs  : glcms_dict (dict of directional matrices)
@@ -446,16 +576,16 @@ def glcm_features(glcms_dict):
     features['Contrast'] = glcm_contrast(glcms_dict, levels)         # f2
     features['Correlation'] = glcm_correlation(glcms_dict, levels)   # f3
     features['Variance'] = glcm_variance(glcms_dict, levels)         # f4
-    features['Homogeneity'] = glcm_homogeneity(glcms_dict, levels)   # IDM,f5
+    features['Homogeneity'] = glcm_homogeneity(glcms_dict, levels)   # f5,IDM
     features['Sum Average'] = glcm_sumavg(glcms_dict, levels)        # f6
     features['Sum Variance'] = glcm_sumvar(glcms_dict, levels)       # f7
     features['Sum Entropy'] = glcm_sumentropy(glcms_dict, levels)    # f8
     features['Entropy'] = glcm_entropy(glcms_dict, levels)           # f9
     features['Diff Variance'] = glcm_diffvar(glcms_dict, levels)     # f10
     features['Diff Entropy'] = glcm_diffentropy(glcms_dict, levels)  # f11
-    # f12
-    # f13
-    # f14
+    features['MoC 1'] = glcm_moc1(glcms_dict, levels)                # f12
+    features['MoC 2'] = glcm_moc2(glcms_dict, levels)                # f13
+    #features['MCC'] = glcm_mcc(glcms_dict, levels)                  # f14
     features['Energy'] = glcm_energy(glcms_dict, levels)  # SQRT(f1)
     # Return feature dictionary
     return features
