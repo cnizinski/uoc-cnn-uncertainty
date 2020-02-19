@@ -116,7 +116,7 @@ def glcm_energy(glcms_dict, ngl):
 
 def glcm_homogeneity(glcms_dict, ngl):
     '''
-    Returns directionally-averaged Haralick homogeneity
+    Returns directionally-averaged Haralick homogeneity (IDM)
     Inputs  : glcms_dict (dict of directional matrices)
     Ouputs  : mean of homog_list
     '''
@@ -432,7 +432,7 @@ def pxi_calc(glcm, ngl, i):
     '''
     Calculates px(i) for single GLCM at i
     Inputs  : glcm (single normalized GLCM)
-    Outputs : pxi, pyj
+    Outputs : pxi
     '''
     pxi = 0
     for j in range(0, ngl-1):
@@ -444,7 +444,7 @@ def pyj_calc(glcm, ngl, j):
     '''
     Calculates py(j) for single GLCM at j
     Inputs  : glcm (single normalized GLCM)
-    Outputs : pxi, pyj
+    Outputs : pyj
     '''
     pyj = 0
     for i in range(0, ngl-1):

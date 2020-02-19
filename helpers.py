@@ -95,3 +95,16 @@ def convert_fname(fname, fields):
     new_fname += idict['Image'][0:3] + '_' + 'NA.tif'
     # Return image id and info as dictionary
     return new_fname
+
+
+def quick_filter(df, filt_dict):
+    '''
+    Returns filtered dataframe from info in dictionary
+    Inputs  : df (pd DataFrame)
+              filt_dict (dict['key']=[list, of, valid, values])
+    Outputs : filt_df
+    '''
+    new_df = df
+    for key in filt_dict:
+        new_df = new_df[new_df[key]==filt_dict[key]]
+    return new_df
