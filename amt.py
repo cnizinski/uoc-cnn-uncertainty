@@ -109,7 +109,7 @@ def get_left(imgspec, cidx, scale):
     idx1 = np.where(np.diff(np.sign(diff1)))[0][-1]
     ipt1, ipt2 = arr1[idx1], arr1[idx1+1]
     # Interpolate between sign change
-    intpts = 2000
+    intpts = 1000
     derr = 1
     while derr > 1.e-3:
         ix = np.linspace(ipt1[0], ipt2[0], num=intpts)
@@ -141,7 +141,7 @@ def get_right(imgspec, cidx, scale):
     idx1 = np.where(np.diff(np.sign(diff1)))[0][0]
     ipt1, ipt2 = arr1[idx1], arr1[idx1+1]
     # Interpolate between sign change
-    intpts = 2000
+    intpts = 1000
     derr = 1
     while derr > 1.e-3:
         ix = np.linspace(ipt1[0], ipt2[0], num=intpts)
@@ -227,7 +227,7 @@ def img_amt(img_roi, max_scale, n, snakes):
 
 def batch_amt(img_df, img_path, save_path, label, params):
     '''
-    Returns mean angle data for single image
+    Returns mean angle data for sets of images
     Inputs  : img_df (dataframe of images for analysis)
               img_path (file path to images, str)
               save_path (file path to save data, str)
