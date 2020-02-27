@@ -1,5 +1,6 @@
 # texture_pkg
  Package for SEM image texture analysis
- Texture techniques:
+ 
+ ## Inclused texture analysis methods
  * Angle measurement technique (AMT)
  * Gray level co-occurrence matrices (GLCM) 
