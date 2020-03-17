@@ -37,11 +37,11 @@ def sample_img(img, barh, rows, cols, region):
             x1 = int(g2 * dims[1] / cols)
             x2 = x1 + int(dims[1] / cols)
             sub_img = img[y1:y2, x1:x2]
-            # Resize and save image to file
+            # Get requested subimage
             if index == region:
                 img_reg = sub_img
             index += 1
-    # Return array of subdivided images
+    # Return subdivided image
     return img_reg
 
 
