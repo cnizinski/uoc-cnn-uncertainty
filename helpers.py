@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import math
 import re
 
@@ -108,3 +109,19 @@ def quick_filter(df, filt_dict):
     for key in filt_dict:
         new_df = new_df[new_df[key]==filt_dict[key]]
     return new_df
+
+
+def json2df(dpath, dfiles):
+    '''
+    Returns filtered dataframe from info in dictionary
+    Inputs  : dpath (str, path to datafiles)
+              dfiles (list of filenames to import)
+    Outputs : concatenated dataframes
+    '''
+    df_list = []
+    for item in dfiles:
+        fname = dpath + '/' + item
+        temp_df = pd.read_json(fname, orient='index', dtype=True)
+        df_list.append(temp_df)
+    return pd.concat(df_list)
+
