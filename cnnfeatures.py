@@ -4,7 +4,7 @@ import pandas as pd
 import time
 import cv2
 import json
-from texture_pkg import sample_img
+from texture_pkg import sample_img, random_crop
 # Keras modules
 import keras
 from keras.models import Model
@@ -34,21 +34,24 @@ def batch_vgg19(img_df, img_path, save_path, label, params):
     for idx in img_df.index:
         # Import image
         fname = img_df.loc[idx]['FileName']
-        img = cv2.imread(img_path+fname, cv2.IMREAD_COLOR)
+        img = cv2.imread(img_path + "\\" + fname, cv2.IMREAD_COLOR)
         # Check if image can be loaded
         if img is None:
+            print(fname + ' could not be loaded')
             continue
         # Extract features for each region of interest
         for i in range(1,5):
+            data = {}
             subimg = sample_img(img, 59, 2, 2, i)
+            subimg = random_crop(subimg, 224)
             x = np.expand_dims(subimg, axis=0)
             x = vgg19x.preprocess_input(x)
-            data = extract.predict(x)[0]
+            data['Features'] = extract.predict(x)[0].tolist()
             data['Label'] = label
             data['Image'] = idx
             batch_dict[idx + '_' + str(i)] = data
     # Save batch_dict to json
-    out = save_path + label + '.json'
+    out = save_path + "\\" + label + ".json"
     with open (out, 'w') as fp:
         json.dump(batch_dict, fp, indent=4)
     print("Batch data written to ", out)

@@ -46,3 +46,17 @@ def sample_img(img, barh, rows, cols, region):
     # Return subdivided image
     return img_reg
 
+
+def random_crop(img, random_crop_size):
+    '''
+    Crops image from keras flow_from_x to random_crop_size
+    Inputs:  img : image
+             random_crop_size : int, one side of square
+    Outputs : img : cropped image             
+    '''
+    assert img.shape[2] == 3
+    height, width = img.shape[0], img.shape[1]
+    dy, dx = random_crop_size, random_crop_size
+    x = np.random.randint(0, width - dx + 1)
+    y = np.random.randint(0, height - dy + 1)
+    return img[y:(y+dy), x:(x+dx), :]
