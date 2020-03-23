@@ -1,3 +1,7 @@
 {
+<<<<<<< HEAD
     "python.pythonPath": "C:\\Users\\cody_\\Anaconda3\\envs\\tf-gpu\\python.exe"
+=======
+    "python.pythonPath": "C:\\Users\\cody_\\Anaconda3\\envs\\ml-env\\python.exe"
+>>>>>>> 55ab5ac19c0dccf3203cb96a2452bd547181456d
 }

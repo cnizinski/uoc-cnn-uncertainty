@@ -5,7 +5,7 @@ import pandas as pd
 def sample_img(img, barh, rows, cols, region):
     '''
     Removes scalebar from image, returns img portion
-    Inputs  : img (grayscale im as np array)
+    Inputs  : img (image as np array)
               barh (info bar height in px)
               rows, cols (number of rows and columns)
               region (img region to return)
@@ -13,9 +13,10 @@ def sample_img(img, barh, rows, cols, region):
     Usage   : img_arr = sample_img(img, 59, 3, 2, 1)
     '''
     # Check for grayscale image
-    if len(img.shape) > 2:
-        print("Input grayscale image")
-        return
+    #if len(img.shape) > 2:
+    #    print("Input grayscale image")
+    #    return
+    n_channels = len(img.shape)
     # Check for valid region
     if region > (rows*cols):
         print("input valid region")
@@ -27,7 +28,8 @@ def sample_img(img, barh, rows, cols, region):
         img = img
     # Get region dimensions
     dims = img.shape
-    img_reg = np.zeros((rows*cols, int(dims[0]/rows), int(dims[1]/cols), 1), dtype=int)
+    img_reg = np.zeros((rows*cols, int(dims[0]/rows), int(dims[1]/cols),\
+        n_channels), dtype=int)
     index = 1
     for g1 in range(0, rows):
         for g2 in range(0, cols):
@@ -43,6 +45,4 @@ def sample_img(img, barh, rows, cols, region):
             index += 1
     # Return subdivided image
     return img_reg
-
-
 
