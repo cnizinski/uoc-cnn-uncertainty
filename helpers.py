@@ -4,20 +4,6 @@ import math
 import re
 
 
-def interpolate(xi, p0, p1):
-    '''
-    Numerically interpolates between (x0,y0) and (x1,y1)
-    Inputs  : interp xi, known x's (x0, x1)
-              known y's (y0, y1)
-    Outputs : unknown yi
-    '''
-    # Interpolate
-    x0, y0 = float(p0[0]), float(p0[1])
-    x1, y1 = float(p1[0]) ,float(p1[1])
-    yi = y0 + (y1-y0) * (float(xi)-x0)/(x1-x0)
-    return yi
-
-
 def img_info(fname, fields):
     '''
     Gets condensed SEM image name and info
@@ -124,4 +110,32 @@ def json2df(dpath, dfiles):
         temp_df = pd.read_json(fname, orient='index', dtype=True)
         df_list.append(temp_df)
     return pd.concat(df_list)
+
+
+def split_dataset(dataframe, test_split, k):
+    '''
+    Splits dataset into test, train, and cross val. sets
+    Inputs:  dataframe: df of split image names, labels
+             test_split: size of test set (float 0 to 1)
+             k: number of cv folds (integer)
+    Outputs: test_df: df of all test ids, labels
+             train_df: df of all train ids, labels 
+             cv_df: train_df w/ fold labels added
+    Usage:   te_df, tr_df, cv_df = split_dataset(all_ df, 0.2, 5)
+    '''
+    # Split parent df, create train/test dfs
+    train_df = dataframe.sample(frac=(1-test_split), random_state=42)
+    test_df = dataframe.drop(train_df.index)
+    # Copy and shuffle train_df, reset indexes
+    cv_df = train_df.sample(frac=1, random_state=42)
+    df_len = len(cv_df)
+    # Create k=cv_folds cross validation sets
+    val_list = [0] * df_len
+    for fold in list(range(k)):
+        idx1 = int(fold * df_len / k)
+        idx2 = idx1 + int(df_len / k)
+        for idx in range(idx1, idx2):
+            val_list[idx] = fold
+    cv_df['fold'] = val_list
+    return test_df, train_df, cv_df
 
