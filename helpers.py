@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import math
 import re
+from PIL import Image
 
 
 def img_info(fname, fields):
@@ -112,7 +113,7 @@ def json2df(dpath, dfiles):
     return pd.concat(df_list)
 
 
-def split_dataset(dataframe, test_split, k):
+def split_dataset(dataframe, test_split, k, seed):
     '''
     Splits dataset into test, train, and cross val. sets
     Inputs:  dataframe: df of split image names, labels
@@ -121,13 +122,13 @@ def split_dataset(dataframe, test_split, k):
     Outputs: test_df: df of all test ids, labels
              train_df: df of all train ids, labels 
              cv_df: train_df w/ fold labels added
-    Usage:   te_df, tr_df, cv_df = split_dataset(all_ df, 0.2, 5)
+    Usage:   te_df, tr_df, cv_df = split_dataset(all_ df, 0.2, 5, 42)
     '''
     # Split parent df, create train/test dfs
-    train_df = dataframe.sample(frac=(1-test_split), random_state=42)
+    train_df = dataframe.sample(frac=(1-test_split), random_state=seed)
     test_df = dataframe.drop(train_df.index)
     # Copy and shuffle train_df, reset indexes
-    cv_df = train_df.sample(frac=1, random_state=42)
+    cv_df = train_df.sample(frac=1, random_state=seed)
     df_len = len(cv_df)
     # Create k=cv_folds cross validation sets
     val_list = [0] * df_len
@@ -139,3 +140,101 @@ def split_dataset(dataframe, test_split, k):
     cv_df['fold'] = val_list
     return test_df, train_df, cv_df
 
+
+def stratified_split(df, label_col, test_split, balance, k, seed):
+    '''
+    Stratified train/test split with oversampled training data
+    Inputs:  df: dataframe of split image names, labels
+             label_col : column of dataframe (str)
+             test_split: size of test set (float 0 to 1)
+             balance: training data imbalance (float 0 to 1)
+                      (# in each class / # largest class)
+             k: number of cv folds (integer)
+             seed : random state (integer)
+    Outputs: test_df: df of all test ids, labels
+             train_df: df of all train ids, labels 
+             cv_df: train_df w/ fold labels added
+    Usage:   te_df, tr_df, cv_df = stratified_split(df, 0.2, 0.8, 5, 42)
+    '''
+    # Stratified test split
+    test_dfs = []
+    for label in df[label_col].unique():
+        temp_df = df[df[label_col]==label]
+        test_dfs.append(temp_df.sample(frac=test_split,random_state=seed))
+    test_df = pd.concat(test_dfs)
+    test_df = test_df.sample(frac=1.0,random_state=seed)
+    # Remove test images from df, leaving unique training images
+    utrain_df = df.drop(test_df.index)
+    # Create k stratified cross validation sets
+    cv_dfs = []
+    for fold in list(range(k)):
+        label_dfs = []
+        for label in df[label_col].unique():
+            temp_df = utrain_df[utrain_df[label_col]==label]
+            n_label = len(temp_df)
+            n_sample = int(n_label / (k-fold))
+            label_dfs.append(temp_df.sample(n=n_sample,random_state=seed))
+        fold_df = pd.concat(label_dfs)
+        utrain_df = utrain_df.drop(fold_df.index)
+        fold_df['fold'] = fold
+        cv_dfs.append(fold_df)
+    cv_df = pd.concat(cv_dfs)
+    # Oversample each fold, join
+    oversampled_dfs = []
+    for fold in list(range(k)):
+        fold_df = cv_df[cv_df['fold']==fold]
+        new_fold_df = oversample(fold_df, label_col, balance)
+        new_fold_df = new_fold_df.sample(frac=1.0,random_state=seed)
+        oversampled_dfs.append(new_fold_df)
+    new_cv_df = pd.concat(oversampled_dfs)
+    train_df = new_cv_df.drop(columns=['fold'])
+    return test_df, train_df, new_cv_df
+
+
+def oversample(df, label_col, balance):
+    '''
+    Oversamples df entries for balances datasets
+    '''
+    labels = df[label_col].unique()
+    n_max = df[label_col].value_counts()[0]
+    label_dfs = []
+    for label in labels:
+        temp_df = df[df[label_col]==label]
+        n_label = len(temp_df)
+        # While class is unbalanced, sample and concat
+        while (n_label <= balance*n_max):
+            samp_df = temp_df.sample(n=1)
+            temp_df = pd.concat([temp_df, samp_df])
+            n_label = len(temp_df)
+        label_dfs.append(temp_df)
+    # Join the oversampled dfs for each label
+    balanced_df = pd.concat(label_dfs)
+    return balanced_df
+
+
+def drop_images(df, fname_col, img_path):
+    '''
+    Drops unreadable images from dataframe
+    '''
+    bad_imgs = []
+    for idx in df.index:
+        fname = img_path + '/' + df.loc[idx][fname_col]
+        try:
+            _img = Image.open(fname)
+        except:
+            bad_imgs.append(idx)
+            print(idx, df.loc[idx][fname_col], 'dropped from df')
+    return df.drop(bad_imgs)
+
+
+def shannon_entropy(pred_list):
+    '''
+    Returns Shannon entropy (base 2) for set of predictions
+    '''
+    entropy = 0.0
+    for pred in pred_list:
+        if pred > 0.0:
+            entropy -= pred * np.log2(pred)
+        else:
+            entropy += 0.0
+    return entropy
