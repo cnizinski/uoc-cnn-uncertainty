@@ -66,6 +66,7 @@ def train_2steps(train_df, train_gen, model, params):
 
 def mc_predict_image(test_gen, model, n):
     '''
+    OBSOLETE: Use mc_predict_df which is faster and mode thread safe
     Monte Carlo (MC) dropout predictions for single image
     Inputs  : test_gen (keras image data generator for single image)
               model (trained keras model, loaded and compiled)
@@ -76,7 +77,8 @@ def mc_predict_image(test_gen, model, n):
     for _i in range(n):
         y_p = model.predict_generator(test_gen,steps=1,verbose=0,workers=1)
         mc_predictions.append(y_p)
-        time.sleep(0.15)
+        # Time delay needed between predictions to prevent Keras thread safe warning
+        time.sleep(0.1)  
     preds = np.array(mc_predictions)
     return np.mean(preds, axis=0)[0], np.var(preds, axis=0)[0]
 
@@ -102,10 +104,13 @@ def mc_predict_df(test_df, img_path, label_idxs, model, n, crop):
         img_dict = {}
         img_dict['image'] = img_df.iloc[0]['image']
         # Get image data generators
-        img_batches = test_gen(img_df, img_path, num_classes, 1)
+        img_batches = test_gen(img_df, img_path, num_classes, n)
         img_crops = crop_generator(img_batches, 224, crop)
         # Make n MC predictions, get probabilites and variances
-        probs, uncs = mc_predict_image(img_crops, model, n)
+        preds = model.predict_generator(img_crops,steps=n,verbose=0,workers=1)
+        preds = np.array(preds)
+        probs = np.mean(preds, axis=0)
+        uncs = np.var(preds, axis=0)
         # Append results to img_dict
         high_prob = np.argmax(probs)
         for key, value in label_idxs.items():
