@@ -94,21 +94,37 @@ def mc_predict_df(test_df, img_path, label_idxs, model, n, crop):
     Outputs : results_df
     '''
     num_classes = len(label_idxs)
+    num_imgs = len(test_df)
     results_dict = {}
     # Cycle through images in test_df
     test_df = test_df.drop_duplicates()
     copy_df = test_df
-    for _i in range(0, len(test_df)):
+    for i in range(0, num_imgs):
+        print('Predicting image {0:4d} of {1:4d}'.format(i+1, num_imgs))
         img_df = copy_df.sample(n=1)
         copy_df = copy_df.drop(img_df.index)
         img_dict = {}
         img_dict['image'] = img_df.iloc[0]['image']
-        # Get image data generators
-        img_batches = test_gen(img_df, img_path, num_classes, n)
-        img_crops = crop_generator(img_batches, 224, crop)
-        # Make n MC predictions, get probabilites and variances
-        preds = model.predict_generator(img_crops,steps=n,verbose=0,workers=1)
-        preds = np.array(preds)
+        if (crop == "center") or (crop == "random"):
+            # Get image data generators
+            img_batches = test_gen(img_df, img_path, num_classes, n)
+            img_crops = crop_generator(img_batches, 224, crop, None)
+            # Make n MC predictions, get probabilites and variances
+            preds = model.predict_generator(img_crops,steps=n,verbose=1,workers=1)
+            preds = np.array(preds)
+        elif (crop == "pseudorandom"):
+            preds = np.empty((0,num_classes))
+            for ii in range(0, n):
+                # Get image data generators
+                img_batches = test_gen(img_df, img_path, num_classes, n)
+                img_crops = crop_generator(img_batches, 224, crop, i+ii)
+                # Make n MC predictions, get probabilites and variances
+                cpreds = model.predict_generator(img_crops,steps=n,verbose=0,workers=1)
+                cpreds = np.array(cpreds)
+                preds = np.concatenate((preds, cpreds), axis=0)
+        else:
+            print("Invalid crop mode")
+        # Convert predictions to numpy array, get prediction mean and variance
         probs = np.mean(preds, axis=0)
         uncs = np.var(preds, axis=0)
         # Append results to img_dict

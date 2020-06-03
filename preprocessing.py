@@ -23,6 +23,28 @@ def random_crop(img, crop_size):
         x = np.random.randint(0, width - dx + 1)
         y = np.random.randint(61, height - dy - 61)  # 60px ~ info bar height
         return img[y:(y+dy), x:(x+dx), :]
+
+
+def pseudorandom_crop(img, crop_size, seedint):
+    '''
+    Crops image from keras flow_from_x to crop_size
+    Inputs:  img : image
+             crop_size : int, one side of square
+    Outputs : img : cropped image             
+    '''
+    if seedint is not None:
+        np.random.seed(seedint)
+    else:
+        pass
+    assert img.shape[2] == 3
+    height, width = img.shape[0], img.shape[1]
+    if (height <= crop_size) or (width <= crop_size):
+        return img
+    else:
+        dy, dx = crop_size, crop_size
+        x = np.random.randint(0, width - dx + 1)
+        y = np.random.randint(61, height - dy - 61)  # 60px ~ info bar height
+        return img[y:(y+dy), x:(x+dx), :]
     
 
 
@@ -44,7 +66,7 @@ def center_crop(img, crop_size):
         return img[y:(y+dy), x:(x+dx), :]
 
 
-def crop_generator(batches, crop_size, mode):
+def crop_generator(batches, crop_size, mode, seedint):
     """
     Performs random or center crop on keras ImageGen batch
     Inputs  : batches (keras image batch)
@@ -58,10 +80,12 @@ def crop_generator(batches, crop_size, mode):
         for i in range(batch_x.shape[0]):
             if mode == 'random':
                 batch_crops[i] = random_crop(batch_x[i], 224)
+            elif mode == 'pseudorandom':
+                batch_crops[i] = pseudorandom_crop(batch_x[i], 224, seedint)
             elif mode == 'center':
                 batch_crops[i] = center_crop(batch_x[i], 224)
             else:
-                print('Invalid crop mode')
+                print("Invalid crop mode")
                 pass
         # "yield" kw needed for iterable generators
         yield (batch_crops, batch_y)
