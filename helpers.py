@@ -9,9 +9,16 @@ def img_info(fname, fields):
     '''
     Gets condensed SEM image name and info
     Inputs  : fname (str, SEM image filename)
-              fields (list of str, all data fields)
+              fields (list of strings for data categories or "default")
     Outputs : info_dict (dictionary of from filename)
     '''
+    #
+    if fields == "default":
+        fields = ["Material", "Magnification", "Resolution", "HFW",
+                  "StartingMaterial", "CalcinationTemp", "CalcinationTime",
+                  "AgingTime", "AgingTemp", "AgingHumidity", "AgingOxygen",
+                  "Impurity", "ImpurityConcentration", "Detector",
+                  "Coating", "Replicate", "Particle", "Image", "AcquisitionDate"]
     # Fill dictionary from filename and data fields
     info_dict = {}
     info = re.split('_', fname)
@@ -238,3 +245,42 @@ def shannon_entropy(pred_list):
         else:
             entropy += 0.0
     return entropy
+
+
+def get_hfw(fname):
+    '''
+    Returns image horizontal field width (in um) from file name
+    '''
+    hfw_str = img_info(fname=fname, fields="default")['HFW']
+    if "um" in hfw_str:
+        hfw_num = np.float(hfw_str[:-2])
+    elif "mm" in hfw_str:
+        hfw_num = np.float(hfw_str[:-2])*1000.0
+    elif ("HFW" in hfw_str) and ("pt" in hfw_str):
+        hfw_str = hfw_str.split('HFW')[1].split('pt')
+        hfw_num = np.float(hfw_str[0] + "." + hfw_str[1])
+    else:
+        hfw_num = "NA"
+    return hfw_num
+
+
+def get_scalebar(full_hfw, full_width, sub_width):
+    '''
+    Returns scalebar size for SEM images
+    '''
+    # Calculate pixels per micron
+    bar_px = full_width / full_hfw
+    bar_scale = 1.0
+    # Set dimensions of scalebar
+    ii = 0
+    while (int(bar_px) > 0.9*sub_width) and (ii < 20):
+        bar_px = bar_px / 2
+        bar_scale = bar_scale / 2
+        ii += 1
+    # Convert from um to nm if necessary
+    if bar_scale < 1.0:
+        bar_scale = np.int(bar_scale * 1000.0)
+        units = "nm"
+    else:
+        units = "um"
+    return int(bar_px), np.round(bar_scale,2), units

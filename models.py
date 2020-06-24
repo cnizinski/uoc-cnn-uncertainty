@@ -49,35 +49,6 @@ def get_VGG16(num_classes, img_size, mc_inf, p):
     return Model(inputs=inp, outputs=out)
 
 
-def get_ResNet50(num_classes, img_size, mc_inf, p, frozen):
-    '''
-    Returns keras model capable of MC dropout during inference
-    ResNet50 from keras.applications
-    Inputs  : num_classes (int, # of classes)
-              img_size (tuple, image size, default=(224,224,3))
-              mc_inf (bool, keep dropout on inference? default=True)
-              p (float (0-1), dropout probability )
-              frozen
-    Outputs : keras model
-    '''
-    # Get base model
-    base = ResNet50(weights='imagenet', include_top=False, input_shape=img_size)
-    if frozen is True:
-        for layer in base.layers:
-            layer.trainable == False
-    else:
-        for layer in base.layers:
-            layer.trainable == True
-    # Add top
-    pool1 = GlobalMaxPooling2D(name='GMP')(base.output)
-    pool2 = GlobalAveragePooling2D(name='GAP')(base.output)
-    head = concatenate([pool1, pool2])
-    head = Dropout(p)(head, training=mc_inf)
-    head = Dense(400, name='fc')(head)
-    out = Dense(num_classes, activation='softmax', name='predictions')(head)
-    return Model(inputs=base.input, outputs=out)
-
-
 def get_ResNet18(num_classes, img_size, mc_inf, p, frozen):
     '''
     Returns keras model capable of MC dropout during inference
@@ -106,7 +77,7 @@ def get_ResNet18(num_classes, img_size, mc_inf, p, frozen):
         head = Dropout(p)(head, training=True)
     else:
         head = Dropout(p)(head)
-    head = Dense(1000, name='fc')(head)
+    head = Dense(1024, name='fc')(head)
     out = Dense(num_classes, activation='softmax', name='predictions')(head)
     return Model(inputs=base.input, outputs=out)
 
@@ -144,7 +115,7 @@ def get_ResNet34(num_classes, img_size, mc_inf, p, frozen):
     return Model(inputs=base.input, outputs=out)
 
 
-def get_ResNet50x(num_classes, img_size, mc_inf, p, frozen):
+def get_ResNet50(num_classes, img_size, mc_inf, p, frozen):
     '''
     Returns keras model capable of MC dropout during inference
     ResNet50 from classifier zoo
@@ -165,7 +136,7 @@ def get_ResNet50x(num_classes, img_size, mc_inf, p, frozen):
         for layer in base.layers:
             layer.trainable == True
     # Add top
-    head = GlobalMaxPooling2D(name='GMP')(base.output)
+    head = GlobalAveragePooling2D(name='GAP')(base.output)
     #pool1 = GlobalMaxPooling2D(name='GMP')(base.output)
     #pool2 = GlobalAveragePooling2D(name='GAP')(base.output)
     #head = concatenate([pool1, pool2])
@@ -173,7 +144,7 @@ def get_ResNet50x(num_classes, img_size, mc_inf, p, frozen):
         head = Dropout(p)(head, training=True)
     else:
         head = Dropout(p)(head)
-    head = Dense(400, name='fc')(head)
+    head = Dense(512, name='fc')(head)
     out = Dense(num_classes, activation='softmax', name='predictions')(head)
     return Model(inputs=base.input, outputs=out)
 

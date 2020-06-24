@@ -1,9 +1,9 @@
 from keras import backend as K
-from keras.callbacks import ModelCheckpoint, EarlyStopping
+from keras.callbacks import ModelCheckpoint
 from keras.callbacks import ReduceLROnPlateau, LearningRateScheduler
 from keras import optimizers
 from keras import metrics
-from .dropout import unfreeze_all
+from .models import unfreeze_all
 from .preprocessing import test_gen, crop_generator
 from .helpers import shannon_entropy
 import numpy as np
@@ -11,9 +11,13 @@ import pandas as pd
 import time
 
 
-def lr_decay(epoch, init_lr):
+def lr_decay(epoch, lr):
     # Learning rate decay scheduler
-    return init_lr/(1.0 + epoch*0.01)
+    if (epoch != 0):
+        new_lr = lr / (1.0 + 0.001*epoch)
+    else:
+        new_lr = lr
+    return new_lr
 
 
 def train_2steps(train_df, train_gen, model, params):
@@ -27,10 +31,11 @@ def train_2steps(train_df, train_gen, model, params):
     # Setup callbacks
     #
     wts = params['data_path'] + '/temp_wts_best.h5'
-    checkpoint = ModelCheckpoint(wts,monitor='loss',verbose=0,save_best_only=True,mode='min')
-    #stopping = EarlyStopping(monitor='val_acc', mode='max', patience=10, verbose=0)
-    #reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=5, min_lr=1.0e-5)
-    schedule = LearningRateScheduler(lr_decay)
+    checkpoint = ModelCheckpoint(wts, monitor='loss', verbose=0,
+                                 save_best_only=True,mode='min')
+    #reduce_lr = ReduceLROnPlateau(monitor='loss', factor=0.5,
+    #                              patience=5, min_lr=1.0e-6, verbose=1)
+    schedule = LearningRateScheduler(lr_decay, verbose=1)
     #
     # Compile model, training (part 1)
     #

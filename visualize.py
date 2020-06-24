@@ -4,12 +4,14 @@ import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
+import matplotlib.patches as patches
 import cv2
 import os
 import time
 import string
 from scipy.signal import convolve2d
-from uncertainty_pkg import random_crop, pseudorandom_crop, test_gen, crop_generator
+from .preprocessing import random_crop, pseudorandom_crop, test_gen, crop_generator
+from .helpers import get_hfw, get_scalebar
 
 
 def get_gradcam_v1(cropped_img, targets, model, last_conv, scale, series):
@@ -74,14 +76,26 @@ def single_image_plot(cropped_img, preds, scaled_dict, overlay):
               overlay (bool, overlay CAMs on cropped_img?)
     Outputs : fig
     '''
+    # Setup plot parameters
     bbox1_props = dict(boxstyle="square,pad=0.12", fc="white", alpha=0.4, lw=0)
+    bbox2_props = dict(boxstyle="square,pad=0.12", fc="yellow", alpha=1, lw=0)
     fig = plt.subplots(2,3, figsize=(7,4.75))
-    plt.subplot(231)
+    ax = plt.subplot(231)
     plt.imshow(cropped_img)
     plt.axis("off")
-    temp_str = "True: "+preds['true_label']+"\nEntropy="+\
-        str(np.round(preds['entropy'],3))
+    # Display classes/entropy
+    temp_str = "True: "+preds['true_label']+\
+        "\nEntropy="+str(np.round(preds['entropy'],3))
     plt.annotate(temp_str, (10,45), bbox=bbox1_props, fontsize=12)
+    # Display scale bar
+    hfw = get_hfw(preds['image'])
+    bar_px, bar_scale, bar_units = get_scalebar(hfw, 1024, 224)
+    ax.add_patch(patches.Rectangle((5, 190), bar_px, 10, color='yellow'))
+    if bar_units == "um":
+        ann_str = str(bar_scale) + r"$\mu$m"
+    else:
+        ann_str = str(bar_scale) + "nm"
+    plt.annotate(ann_str, (40,200), bbox=bbox2_props, fontsize=12)
     i = 1
     for key in scaled_dict:
         heatmap = scaled_dict[key]
@@ -170,6 +184,7 @@ def single_confidence_plot(corr_df, targets, true_label, model, img_path, conf):
     # Setup plot parameters
     abc = string.ascii_letters
     bbox1_props = dict(boxstyle="square,pad=0.12", fc="white", alpha=0.4, lw=0)
+    bbox2_props = dict(boxstyle="square,pad=0.12", fc="yellow", alpha=1, lw=0)
     fig = plt.figure(1, figsize=(6.5,7.0))
     spec = gridspec.GridSpec(ncols=5, nrows=5, figure=fig)
     true_idx = targets[true_label]
@@ -200,12 +215,23 @@ def single_confidence_plot(corr_df, targets, true_label, model, img_path, conf):
                 temp_str = "("+abc[ii*5+jj]+")"#+str(np.round(true_prob,3))
                 plt.annotate(temp_str, (10,45), bbox=bbox1_props, fontsize=12)
                 plt.axis("off")
+                # Add scale bar if first image
+                if (ii == 0) and (jj == 0):
+                    hfw = get_hfw(series['image'])
+                    bar_px, bar_scale, bar_units = get_scalebar(hfw, 1024, 224)
+                    ax.add_patch(patches.Rectangle((5, 185), bar_px, 15, color='yellow'))
+                    if bar_units == "um":
+                        ann_str = str(bar_scale) + r"$\mu$m"
+                    else:
+                        ann_str = str(bar_scale) + "nm"
+                    plt.annotate(ann_str, (40,200), bbox=bbox2_props)
+                #
                 jj += 1
             else:
                 # Try new image/crop
                 jj += 0
         ii += 1
-    plt.suptitle(true_label + " CAMs", fontsize=15)
+    plt.suptitle(true_label, fontsize=15)
     plt.tight_layout(rect=[0, 0, 1, 0.97])
     # return figure
     return fig
@@ -225,6 +251,7 @@ def multiple_confidence_plot(corr_df, targets, model, img_path, conf):
     # Setup plot parameters
     abc = string.ascii_letters
     bbox1_props = dict(boxstyle="square,pad=0.12", fc="white", alpha=0.4, lw=0)
+    bbox2_props = dict(boxstyle="square,pad=0.12", fc="yellow", alpha=1, lw=0)
     fig = plt.figure(1, figsize=(6.5,7.8))
     spec = gridspec.GridSpec(ncols=5, nrows=5, figure=fig)
     ii = 0
@@ -255,6 +282,17 @@ def multiple_confidence_plot(corr_df, targets, model, img_path, conf):
                 temp_str = "("+abc[ii*5+jj]+")"#+str(np.round(true_prob,3))
                 plt.annotate(temp_str, (10,45), bbox=bbox1_props, fontsize=12)
                 plt.axis("off")
+                # Add scale bar if first image
+                if (ii == 0) and (jj == 0):
+                    hfw = get_hfw(series['image'])
+                    bar_px, bar_scale, bar_units = get_scalebar(hfw, 1024, 224)
+                    ax.add_patch(patches.Rectangle((5, 185), bar_px, 15, color='yellow'))
+                    if bar_units == "um":
+                        ann_str = str(bar_scale) + r"$\mu$m"
+                    else:
+                        ann_str = str(bar_scale) + "nm"
+                    plt.annotate(ann_str, (40,200), bbox=bbox2_props)
+                #
                 if jj == 2:
                     ax.set_title(key, fontsize=15)
                 jj += 1
