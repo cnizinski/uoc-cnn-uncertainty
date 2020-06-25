@@ -5,7 +5,7 @@ from keras import optimizers
 from keras import metrics
 from .models import unfreeze_all
 from .preprocessing import test_gen, crop_generator
-from .helpers import shannon_entropy
+from .helpers import shannon_entropy, get_hfw
 import numpy as np
 import pandas as pd
 import time
@@ -113,7 +113,7 @@ def mc_predict_df(test_df, img_path, label_idxs, model, n, crop):
         if (crop == "center") or (crop == "random"):
             # Get image data generators
             img_batches = test_gen(img_df, img_path, num_classes, n)
-            img_crops = crop_generator(img_batches, 224, crop, None)
+            img_crops = crop_generator(img_batches, 224, crop, None, None, None)
             # Make n MC predictions, get probabilites and variances
             preds = model.predict_generator(img_crops,steps=n,verbose=1,workers=1)
             preds = np.array(preds)
@@ -122,11 +122,19 @@ def mc_predict_df(test_df, img_path, label_idxs, model, n, crop):
             for ii in range(0, n):
                 # Get image data generators
                 img_batches = test_gen(img_df, img_path, num_classes, n)
-                img_crops = crop_generator(img_batches, 224, crop, i+ii)
+                img_crops = crop_generator(img_batches, 224, crop, i+ii, None, None)
                 # Make n MC predictions, get probabilites and variances
                 cpreds = model.predict_generator(img_crops,steps=n,verbose=0,workers=1)
                 cpreds = np.array(cpreds)
                 preds = np.concatenate((preds, cpreds), axis=0)
+        elif (crop == "adaptive"):
+            # Get image data generators
+            hfw = get_hfw(img_dict['image'])
+            img_batches = test_gen(img_df, img_path, num_classes, n)
+            img_crops = crop_generator(img_batches, 224, crop, None, 6.13, hfw)
+            # Make n MC predictions, get probabilites and variances
+            preds = model.predict_generator(img_crops,steps=n,verbose=1,workers=1)
+            preds = np.array(preds)
         else:
             print("Invalid crop mode")
         # Convert predictions to numpy array, get prediction mean and variance
