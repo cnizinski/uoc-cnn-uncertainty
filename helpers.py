@@ -236,7 +236,7 @@ def drop_images(df, fname_col, img_path):
 
 def shannon_entropy(pred_list):
     '''
-    Returns Shannon entropy (base 2) for set of predictions
+    Returns Shannon entropy (base 2) for set of predictions in bits
     '''
     entropy = 0.0
     for pred in pred_list:
@@ -247,20 +247,69 @@ def shannon_entropy(pred_list):
     return entropy
 
 
+def kl_divergence(exp_dist, pred_dist):
+    '''
+    Returns Kullback-Leibler (KL) Divergence for set of predictions in bits
+    Inputs  : exp_dist  (list of floats, UOC mixture fractions ground truth, P)
+              pred_dist (list of floats, predicted CNN softmax scores, Q)
+    '''
+    dkl = 0.0
+    for i in range(0,len(pred_dist)):
+        if (pred_dist[i] > 0.0) and (exp_dist[i] > 0.0):
+            dkl += exp_dist[i] * np.log2(exp_dist[i]/pred_dist[i])
+        else:
+            dkl += 0.0
+    return dkl
+
+
+def series2list(pred_series, n_classes):
+    '''
+    Encodes softmax scores for entropy or KL divergence calculation
+    Inputs  : pred_series (pandas series from prediction df)
+              n_classes   (number of classes, int 5 or 16)
+    Outputs : pred_list   (list of n_classes softmax scores)
+    '''
+    # Get correct label set
+    if n_classes == 5:
+        label_set = ["ADU", "AUC", "MDU", "SDU", "UO4"]
+    elif n_classes == 16:
+        label_set = ['ADU-U3O8','ADU-UO2','ADU-UO3','AUC-U3O8','AUC-UO3',\
+                     'AUCd-UO2','AUCi-UO2','MDU-U3O8','MDU-UO2','MDU-UO3',\
+                     'SDU-U3O8','SDU-UO2','SDU-UO3','UO4-U3O8','UO4-UO2','UO4-UO3']
+    else:
+        print("Invalid number of classes")
+        return []
+    # Fill list with predictions
+    pred_list = []
+    for item in label_set:
+        col_name = item + "_prob"
+        pred_list.append(pred_series[col_name])
+    return pred_list
+
+
 def get_hfw(fname):
     '''
     Returns image horizontal field width (in um) from file name
     '''
     hfw_str = img_info(fname=fname, fields="default")['HFW']
-    if "um" in hfw_str:
-        hfw_num = np.float(hfw_str[:-2])
-    elif "mm" in hfw_str:
-        hfw_num = np.float(hfw_str[:-2])*1000.0
-    elif ("HFW" in hfw_str) and ("pt" in hfw_str):
-        hfw_str = hfw_str.split('HFW')[1].split('pt')
-        hfw_num = np.float(hfw_str[0] + "." + hfw_str[1])
-    else:
-        hfw_num = "NA"
+    try:
+        # Assume HFW in microns is w/o units
+        hfw_num = np.float(hfw_str)
+    except:
+        if "um" in hfw_str:
+            # If HFW has "um" at end
+            hfw_num = np.float(hfw_str[:-2])
+        elif "mm" in hfw_str:
+            # If HFW has "mm" at end
+            hfw_num = np.float(hfw_str[:-2])*1000.0
+        elif ("HFW" in hfw_str) and ("pt" in hfw_str):
+            # If HFW uses "HFWxptx" notation
+            hfw_str = hfw_str.split('HFW')[1].split('pt')
+            hfw_num = np.float(hfw_str[0] + "." + hfw_str[1])
+        else:
+            # If nothing can be done with HFW field
+            hfw_num = "NA"
+    # return value
     return hfw_num
 
 
@@ -284,3 +333,24 @@ def get_scalebar(full_hfw, full_width, sub_width):
     else:
         units = "um"
     return int(bar_px), np.round(bar_scale,2), units
+
+
+def convert_labels2sm(dpath, old_fname, new_fname, savefile):
+    '''
+    Converts Part 3 labels (StartingMaterial-Material) to SM only
+    '''
+    print(old_fname, "->", new_fname)
+    # Change label to SM
+    old_df = pd.read_csv(dpath+"\\"+old_fname, index_col='Img_ID')
+    print("Old classes: ", old_df['label'].unique())
+    old_df['label'] = old_df['StartingMaterial']
+    # Standardize labels
+    old_df = old_df.replace(['UO2(HNO3)2','UO4-2H2O'], 'UO4')
+    old_df = old_df.replace(['AUCi','AUCd'], 'AUC')
+    #
+    new_df = old_df
+    print("New classes: ", new_df['label'].unique())
+    #
+    if savefile is True:
+        new_df.to_csv(dpath+"\\"+new_fname, index='Img_ID')
+    return new_df

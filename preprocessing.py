@@ -16,7 +16,7 @@ def random_crop(img, crop_size):
     Outputs : img : cropped image             
     '''
     assert img.shape[2] == 3
-    width, height = img.shape[0], img.shape[1]
+    height, width = img.shape[0], img.shape[1]
     if (height <= crop_size) or (width <= crop_size):
         return img
     else:
@@ -38,7 +38,7 @@ def pseudorandom_crop(img, crop_size, seedint):
     else:
         pass
     assert img.shape[2] == 3
-    width, height = img.shape[0], img.shape[1]
+    height, width = img.shape[0], img.shape[1]
     if (height <= crop_size) or (width <= crop_size):
         return img
     else:
@@ -56,7 +56,7 @@ def center_crop(img, crop_size):
     Outputs : img : cropped image             
     '''
     assert img.shape[2] == 3
-    width, height = img.shape[0], img.shape[1]
+    height, width = img.shape[0], img.shape[1]
     if (height <= crop_size) or (width <= crop_size):
         return img
     else:
@@ -66,7 +66,7 @@ def center_crop(img, crop_size):
         return img[y:(y+dy), x:(x+dx), :]
 
 
-def adaptive_crop(img, crop_size, train_hfw, img_hfw):
+def adaptive_crop1(img, crop_size, train_hfw, img_hfw):
     '''
     Crops image from keras flow_from_x to crop_size
     Adjusts for different image scales
@@ -77,7 +77,7 @@ def adaptive_crop(img, crop_size, train_hfw, img_hfw):
     Outputs : img : cropped image          
     '''
     assert img.shape[2] == 3
-    width, height = img.shape[0], img.shape[1]
+    height, width = img.shape[0], img.shape[1]
     if (height <= crop_size) or (width <= crop_size):
         return img
     else:
@@ -86,6 +86,33 @@ def adaptive_crop(img, crop_size, train_hfw, img_hfw):
         dy, dx = new_crop_size, new_crop_size
         x = np.random.randint(0, width - dx + 1)
         y = np.random.randint(61, height - dy - 61)  # 60px ~ info bar height
+        temp_img = img[y:(y+dy), x:(x+dx), :]
+        return cv2.resize(temp_img, (crop_size,crop_size))
+
+
+def adaptive_crop2(img, crop_size, train_hfw, img_hfw, seedint):
+    '''
+    Crops image from keras flow_from_x to crop_size
+    Adjusts for different image scale. Uses random seed.
+    Inputs:  img : image
+             crop_size : int, one side of square
+    Outputs : img : cropped image             
+    '''
+    if seedint is not None:
+        np.random.seed(seedint)
+    else:
+        pass
+    assert img.shape[2] == 3
+    height, width = img.shape[0], img.shape[1]
+    if (height <= crop_size) or (width <= crop_size):
+        return img
+    else:
+        # Setup image scale factor
+        new_crop_size = np.int(train_hfw / img_hfw * 224)
+        dy, dx = new_crop_size, new_crop_size
+        x = np.random.randint(0, width - dx + 1)
+        y = np.random.randint(61, height - dy - 61)  # 60px ~ info bar height
+        # print(img_hfw, new_crop_size, x, y) # debugging
         temp_img = img[y:(y+dy), x:(x+dx), :]
         return cv2.resize(temp_img, (crop_size,crop_size))
 
@@ -102,14 +129,16 @@ def crop_generator(batches, crop_size, mode, seedint, thfw, ihfw):
         batch_x, batch_y = next(batches)
         batch_crops = np.zeros((batch_x.shape[0],crop_size,crop_size,3))
         for i in range(batch_x.shape[0]):
-            if mode == 'random':
-                batch_crops[i] = random_crop(batch_x[i], 224)
+            if mode == 'center':
+                batch_crops[i] = center_crop(batch_x[i],224)
+            elif mode == 'random':
+                batch_crops[i] = random_crop(batch_x[i],224)
             elif mode == 'pseudorandom':
-                batch_crops[i] = pseudorandom_crop(batch_x[i], 224, seedint)
-            elif mode == 'center':
-                batch_crops[i] = center_crop(batch_x[i], 224)
-            elif mode == 'adaptive':
-                batch_crops[i] = adaptive_crop(batch_x[i], 224, thfw, ihfw)
+                batch_crops[i] = pseudorandom_crop(batch_x[i],224,seedint)
+            elif mode == 'adaptive random':
+                batch_crops[i] = adaptive_crop1(batch_x[i],224,thfw,ihfw)
+            elif mode == 'adaptive pseudorandom':
+                batch_crops[i] = adaptive_crop2(batch_x[i],224,thfw,ihfw,seedint)
             else:
                 print("Invalid crop mode")
                 pass
