@@ -17,14 +17,14 @@ def img_info(fname, fields):
         fields = ["Material", "Magnification", "Resolution", "HFW",
                   "StartingMaterial", "CalcinationTemp", "CalcinationTime",
                   "AgingTime", "AgingTemp", "AgingHumidity", "AgingOxygen",
-                  "Impurity", "ImpurityConcentration", "Detector",
-                  "Coating", "Replicate", "Particle", "Image", "AcquisitionDate"]
+                  "Impurity", "ImpurityConcentration", "Detector", "Coating", 
+                  "Replicate", "Particle", "Image", "AcquisitionDate"]
     # Fill dictionary from filename and data fields
     info_dict = {}
-    info = re.split('_', fname)
+    info = re.split('_', fname[:-4])
     # Correctly labeled images
     if (len(info) == len(fields)):
-        for i in range(0, len(fields)-1):
+        for i in range(0, len(fields)):
             info_dict[fields[i]] = info[i]
     # Alpha and UO3 split by underscore
     elif (len(info) == len(fields)+1) and (info[0]=='Alpha'):
@@ -52,9 +52,10 @@ def img_info(fname, fields):
     else:
         print(fname, 'does not contain enough fields')
         for i in range(0, len(fields)-1):
-            info_dict[fields[i]] = 'x'
+            info_dict[fields[i]] = ""
     # 
-    info_dict['Image'] = info_dict['Image'][0:3]
+    info_dict['Image'] = info_dict['Image']
+    #info_dict['AcquisitionDate'] = info_dict['AcquisitionDate'][:-4]
     info_dict['FileName'] = fname
     # Return image id and info as dictionary
     return info_dict
@@ -247,16 +248,17 @@ def shannon_entropy(pred_list):
     return entropy
 
 
-def kl_divergence(exp_dist, pred_dist):
+def kl_divergence(pred_dist, true_dist):
     '''
     Returns Kullback-Leibler (KL) Divergence for set of predictions in bits
-    Inputs  : exp_dist  (list of floats, UOC mixture fractions ground truth, P)
-              pred_dist (list of floats, predicted CNN softmax scores, Q)
+    Inputs  : pred_dist (list of floats, predicted CNN softmax scores, P)
+              true_dist  (list of floats, UOC mixture fractions ground truth, Q)
+              
     '''
     dkl = 0.0
     for i in range(0,len(pred_dist)):
-        if (pred_dist[i] > 0.0) and (exp_dist[i] > 0.0):
-            dkl += exp_dist[i] * np.log2(exp_dist[i]/pred_dist[i])
+        if (pred_dist[i] > 0.0) and (true_dist[i] > 0.0):
+            dkl += pred_dist[i] * np.log2(pred_dist[i]/true_dist[i])
         else:
             dkl += 0.0
     return dkl
