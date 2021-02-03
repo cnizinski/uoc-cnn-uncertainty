@@ -1,5 +1,5 @@
 # uoc-cnn-uncertainty
-Package for training keras CNNs on SEM images, making predictions with uncertainty, and visualizing learned features. For use with University of Utah uranium ore concentrate (UOC) images.
+Package for training keras CNNs on SEM images, making predictions with uncertainty, and visualizing learned features. For use with University of Utah UOC SEM images.
 
 ## Modules and Functions
 ### helpers.py
