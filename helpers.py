@@ -266,7 +266,7 @@ def kl_divergence(pred_dist, true_dist):
 
 def series2list(pred_series, n_classes):
     '''
-    Encodes softmax scores for entropy or KL divergence calculation
+    Encodes softmax scores for entropy for KL divergence calculation
     Inputs  : pred_series (pandas series from prediction df)
               n_classes   (number of classes, int 5 or 16)
     Outputs : pred_list   (list of n_classes softmax scores)
