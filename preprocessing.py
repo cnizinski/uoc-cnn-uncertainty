@@ -61,8 +61,8 @@ def center_crop(img, crop_size):
         return img
     else:
         dy, dx = crop_size, crop_size
-        x = int(width/2 + dx/2)
-        y = int(height/2 + dy/2)
+        x = int(width/2 - dx/2)
+        y = int(height/2 - dy/2)
         return img[y:(y+dy), x:(x+dx), :]
 
 
