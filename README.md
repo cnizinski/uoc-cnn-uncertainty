@@ -1,4 +1,4 @@
-# uoc-cnn-uncertainty
+# uoc_cnn_uncertainty
 Package for training keras CNNs on SEM images, making predictions with uncertainty, and visualizing learned features. For use with University of Utah UOC SEM images.
 
 ## Modules and Functions
