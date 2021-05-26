@@ -3,6 +3,7 @@ import pandas as pd
 import math
 import re
 from PIL import Image
+import tifffile
 
 
 def img_info(fname, fields):
@@ -298,11 +299,13 @@ def get_hfw(fname):
         # Assume HFW in microns is w/o units
         hfw_num = np.float(hfw_str)
     except:
-        if "um" in hfw_str:
+        if ("um" in hfw_str):
             # If HFW has "um" at end
+            hfw_str = hfw_str.replace("-", ".")
             hfw_num = np.float(hfw_str[:-2])
         elif "mm" in hfw_str:
             # If HFW has "mm" at end
+            hfw_str = hfw_str.replace("-", ".")
             hfw_num = np.float(hfw_str[:-2])*1000.0
         elif ("HFW" in hfw_str) and ("pt" in hfw_str):
             # If HFW uses "HFWxptx" notation
@@ -313,6 +316,14 @@ def get_hfw(fname):
             hfw_num = "NA"
     # return value
     return hfw_num
+
+
+def metadata_hfw(fpath):
+    '''Returns HFW from SEM image metadata'''
+    with tifffile.TiffFile(fpath) as tif:
+            hfw = tif.fei_metadata['EBeam']['HFW']*(10**6)
+            # hfw = tif.fei_metadata['Scan']['HorFieldsize']*(10**6)
+    return hfw
 
 
 def get_scalebar(full_hfw, full_width, sub_width):
